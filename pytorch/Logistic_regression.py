@@ -76,6 +76,6 @@ for epoch in range(num_epochs):
 with torch.no_grad():
     y_hat = model(X_test)
     y_hat_class = y_hat.round()
-    acc = y_hat_class.eq(y_test).sum() / float(y_test.shape[0]) *100
+    acc = y_hat_class.eq(y_test).sum() / float(y_test.shape[0]) * 100
     print(f'accuracy = {acc:.2f}%')
-    # model.eval()
+
