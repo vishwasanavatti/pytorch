@@ -142,7 +142,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.001)
 
 step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)  # every 7 epochs LR is updated by 10%
 
-model = train_model(model, criterion, optimizer, scheduler, 20)
+model = train_model(model, criterion, optimizer, step_lr_scheduler, 20)
 
 #####
 model = models.resnet18(pretrained=True)
@@ -160,4 +160,4 @@ optimizer = optim.SGD(model.parameters(), lr=0.001)
 
 step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)  # every 7 epochs LR is updated by 10%
 
-model = train_model(model, criterion, optimizer, scheduler, 20)
+model = train_model(model, criterion, optimizer, step_lr_scheduler, 20)
