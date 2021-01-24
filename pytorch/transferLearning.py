@@ -1,3 +1,5 @@
+# no data available to test code
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -28,29 +30,28 @@ data_transforms = {
     ]),
 }
 
-data_dir = './data/hymenoptera_data'
+data_dir = 'data/hymenoptera_data'
 image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                           data_transforms[x])
                   for x in ['train', 'val']}
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4,
-                                             shuffle=True, num_workers=0)
-              for x in ['train', 'val']}
+                                              shuffle=True, num_workers=0)
+               for x in ['train', 'val']}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 class_names = image_datasets['train'].classes
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(class_names)
 
-
-def imshow(inp, title):
-    """Imshow for Tensor."""
-    inp = inp.numpy().transpose((1, 2, 0))
-    inp = std * inp + mean
-    inp = np.clip(inp, 0, 1)
-    plt.imshow(inp)
-    plt.title(title)
-    plt.show()
-
+# def imshow(inp, title):
+#     """Imshow for Tensor."""
+#     inp = inp.numpy().transpose((1, 2, 0))
+#     inp = std * inp + mean
+#     inp = np.clip(inp, 0, 1)
+#     plt.imshow(inp)
+#     plt.title(title)
+#     plt.show()
+#
 
 # Get a batch of training data
 inputs, classes = next(iter(dataloaders['train']))
@@ -58,7 +59,9 @@ inputs, classes = next(iter(dataloaders['train']))
 # Make a grid from batch
 out = torchvision.utils.make_grid(inputs)
 
-imshow(out, title=[class_names[x] for x in classes])
+
+# imshow(out, title=[class_names[x] for x in classes])
+
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     since = time.time()
@@ -67,7 +70,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     best_acc = 0.0
 
     for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('Epoch {}/{}'.format(epoch + 1, num_epochs))
         print('-' * 10)
 
         # Each epoch has a training and validation phase
@@ -75,7 +78,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             if phase == 'train':
                 model.train()  # Set model to training mode
             else:
-                model.eval()   # Set model to evaluate mode
+                model.eval()  # Set model to evaluate mode
 
             running_loss = 0.0
             running_corrects = 0
@@ -116,8 +119,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
 
-        print()
-
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
@@ -128,57 +129,35 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     return model
 
 
-#### Finetuning the convnet ####
-# Load a pretrained model and reset final fully connected layer.
-
 model = models.resnet18(pretrained=True)
-num_ftrs = model.fc.in_features
-# Here the size of each output sample is set to 2.
-# Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
-model.fc = nn.Linear(num_ftrs, 2)
+num_features = model.fc.in_features
 
-model = model.to(device)
+model.fc = nn.Linear(num_features, 2)
+model.to(device)
 
 criterion = nn.CrossEntropyLoss()
-
-# Observe that all parameters are being optimized
 optimizer = optim.SGD(model.parameters(), lr=0.001)
 
-# StepLR Decays the learning rate of each parameter group by gamma every step_size epochs
-# Decay LR by a factor of 0.1 every 7 epochs
-# Learning rate scheduling should be applied after optimizer’s update
-# e.g., you should write your code this way:
-# for epoch in range(100):
-#     train(...)
-#     validate(...)
-#     scheduler.step()
+# Scheduler
 
-step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)  # every 7 epochs LR is updated by 10%
 
-model = train_model(model, criterion, optimizer, step_lr_scheduler, num_epochs=25)
+model = train_model(model, criterion, optimizer, scheduler, 20)
 
-
-#### ConvNet as fixed feature extractor ####
-# Here, we need to freeze all the network except the final layer.
-# We need to set requires_grad == False to freeze the parameters so that the gradients are not computed in backward()
-model_conv = torchvision.models.resnet18(pretrained=True)
-for param in model_conv.parameters():
+#####
+model = models.resnet18(pretrained=True)
+for param in model.parameters():
     param.requires_grad = False
+num_features = model.fc.in_features
 
-# Parameters of newly constructed modules have requires_grad=True by default
-num_ftrs = model_conv.fc.in_features
-model_conv.fc = nn.Linear(num_ftrs, 2)
-
-model_conv = model_conv.to(device)
+model.fc = nn.Linear(num_features, 2)
+model.to(device)
 
 criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr=0.001)
 
-# Observe that only parameters of final layer are being optimized as
-# opposed to before.
-optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
+# Scheduler
 
-# Decay LR by a factor of 0.1 every 7 epochs
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)  # every 7 epochs LR is updated by 10%
 
-model_conv = train_model(model_conv, criterion, optimizer_conv,
-                         exp_lr_scheduler, num_epochs=25)
+model = train_model(model, criterion, optimizer, scheduler, 20)
